@@ -1,0 +1,59 @@
+# Hierarchical MMM for PairsRSS - Version 2: Parameters a and c as linear function of (mean-centered) set size
+
+model{
+   # Likelihood
+
+   for (i in 1:nsubj) {
+      for (c in 1:nconds)  {
+      	k[c, i, 1:3] ~ dmulti(P[c, i, 1:3], N)
+      	loglik[c, i] <- logdensity.multi(k[c, i, 1:3], P[c, i, 1:3], N)
+      }
+   }
+
+  for (i in 1:nsubj)  {
+      muA[i] ~ dnorm(meanA, lambdaA)
+      muC[i] ~ dnorm(meanC, lambdaC)
+	  muB[i] ~ dnorm(meanB, lambdaB)
+      slopeA[i] ~ dnorm(dA, lambdaA)
+      slopeC[i] ~ dnorm(dC, lambdaC)
+    for (ss in 1:nsetsize) {
+      # linear model on A and C
+      A[i,ss] <- muA[i] + slopeA[i] * Csetsize[ss]
+      C[i,ss] <- muC[i] + slopeC[i] * Csetsize[ss]
+    }
+    
+    # compute activation values and response probabilities
+    
+    for (c in 1:nconds) {
+    
+      ActCorr[i,c] <- muB[i] + A[i,SSidx[c]] + C[i,SSidx[c]]
+      ActOther[i,c] <- muB[i] + A[i,SSidx[c]]
+      ActNPL[i,c] <- muB[i]
+      Denom[i,c] <- ActCorr[i,c] + RSSlist[RSSidx[c,1]] * ActOther[i,c] + RSSnpl[RSSidx[c,2]] * ActNPL[i,c]
+      P[c,i,1] <- ActCorr[i,c]/Denom[i,c]
+      P[c,i,2] <- (RSSlist[RSSidx[c,1]]-1) * ActOther[i,c] / Denom[i,c]
+      P[c,i,3] <- RSSnpl[RSSidx[c,2]] * ActNPL[i,c] / Denom[i,c]
+    
+    }
+
+  }
+    
+
+# Priors
+
+# Allow separate group level parameters A and C for each set size
+  meanA ~ dnorm(1, 0.1)
+  #meanC ~ dnorm(10, 0.1)
+  meanC <- 10
+  meanB ~ dnorm(0.1, 0.1)
+  dA ~ dnorm(0, 0.1)
+  dC ~ dnorm(0, 0.1)
+  sgA ~ dgamma(1,0.1)
+  sgC ~ dgamma(1,0.1)
+  sgB ~ dgamma(1,0.1)
+lambdaA <- 1/pow(sgA,2)
+lambdaC <- 1/pow(sgC,2)
+lambdaB <- 1/pow(sgB,2)
+
+
+}
